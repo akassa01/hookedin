@@ -2,7 +2,7 @@ import { useRef } from "react";
 import type { Profile } from "../profile";
 import { Avatar } from "./Avatar";
 import { readImageFile, initialsFromName } from "../util";
-import { CloseIcon } from "./icons";
+import { CloseIcon, LockIcon } from "./icons";
 
 interface ProfileSettingsProps {
   profile: Profile;
@@ -75,6 +75,14 @@ export function ProfileSettings({ profile, onChange, onClose }: ProfileSettingsP
             onChange={(e) => onChange({ headline: e.target.value })}
           />
         </label>
+
+        <div className="privacy-note">
+          <LockIcon size={16} />
+          <span>
+            Everything you type stays in this browser on your device. Nothing is sent to
+            us or saved on a server.
+          </span>
+        </div>
 
         <div className="modal-foot">
           <button className="post-btn" type="button" onClick={onClose}>

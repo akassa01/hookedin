@@ -75,6 +75,9 @@ export const CloseIcon = svg(
   "M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"
 );
 export const CaretDown = svg("M7 10l5 5 5-5z");
+export const LockIcon = svg(
+  "M12 1a5 5 0 0 0-5 5v3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2V6a5 5 0 0 0-5-5zm3 8H9V6a3 3 0 0 1 6 0v3z"
+);
 
 // ── Reaction badges (the small overlapping colored circles) ─────────────────
 export function ReactionBadge({
