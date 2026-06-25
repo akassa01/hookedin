@@ -210,6 +210,14 @@ That was me. The crater taught me more than either exit did. If you're in the me
 export const MY_POST_INDEX = 4;
 
 // A sensible starter draft so the tool is immediately usable on load.
-export const SAMPLE_DRAFT = `I turned down a $250k offer from @[Stripe] last week.
+export const SAMPLE_DRAFT = `A stranger paid for my coffee this morning.
 
-Everyone told me I was insane. Maybe I am. But here's the math nobody runs before they say yes to the safe thing — and why I'd make the same call again tomorrow.`;
+I cried in my car for 20 minutes. Then I closed a $40k deal.
+
+Here's what that barista taught me about B2B sales that my MBA never could 🧵
+
+1/ Generosity compounds. She didn't ask for anything. Neither should your first 5 touchpoints.
+
+2/ Most people are one act of kindness away from saying yes. Your pipeline is no different.
+
+Agree? 🙏 Repost to save someone's quarter.`;
