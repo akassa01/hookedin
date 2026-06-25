@@ -122,9 +122,29 @@ button {
   color: rgba(0, 0, 0, 0.4);
 }
 .compose-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--li-muted);
   margin: 8px 0 0;
+}
+.hint-note {
+  color: var(--li-muted);
+}
+.hint-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.hint-toggle input {
+  cursor: pointer;
+  margin: 0;
 }
 .compose-hint code {
   background: #eef3f8;
@@ -220,13 +240,13 @@ button {
   border-bottom: 1px solid var(--li-border);
 }
 .li-nav-inner {
-  max-width: 1128px;
+  max-width: var(--li-page-max, 1160px);
   margin: 0 auto;
   height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 var(--li-page-pad-x, 16px);
 }
 .li-nav-left {
   display: flex;
@@ -325,8 +345,16 @@ button {
   height: calc(100vh - 230px);
   padding: 8px 0;
 }
-.m-col .drag-handle {
-  right: -3px;
+/* The phone frame clips overflow, so seat the handles just inside its edges
+   and drop the hint pills (they'd be clipped) — the grips alone read as draggable. */
+.m-col .drag-handle--right {
+  right: 1px;
+}
+.m-col .drag-handle--left {
+  left: 1px;
+}
+.m-col .drag-hint {
+  display: none;
 }
 
 .m-nav {
@@ -385,13 +413,13 @@ button {
 
 /* ─── 3-column page ──────────────────────────────────────────────────────── */
 .li-page {
-  max-width: 1128px;
+  max-width: var(--li-page-max, 1160px);
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  padding: 24px var(--li-page-pad-x, 16px) 64px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 24px;
+  gap: var(--li-col-gap, 24px);
 }
 .li-left,
 .li-right {
@@ -403,10 +431,10 @@ button {
   gap: 8px;
 }
 .li-left {
-  width: 225px;
+  width: var(--li-left-width, 225px);
 }
 .li-right {
-  width: 300px;
+  width: var(--li-right-width, 300px);
 }
 .li-card {
   background: var(--li-card);
@@ -586,7 +614,6 @@ button {
 .drag-handle {
   position: absolute;
   top: 0;
-  right: -9px;
   width: 16px;
   height: 100%;
   cursor: ew-resize;
@@ -595,6 +622,12 @@ button {
   justify-content: center;
   padding-top: 120px;
   touch-action: none;
+}
+.drag-handle--right {
+  right: -9px;
+}
+.drag-handle--left {
+  left: -9px;
 }
 .drag-grip {
   width: 6px;
@@ -606,6 +639,31 @@ button {
 .drag-handle:hover .drag-grip,
 body.dragging .drag-grip {
   background: var(--li-blue);
+}
+
+/* Persistent "you can drag this" affordance, revealed on hover of the edge. */
+.drag-hint {
+  position: absolute;
+  top: 96px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--li-blue);
+  padding: 3px 8px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.drag-handle--right .drag-hint {
+  left: 18px;
+}
+.drag-handle--left .drag-hint {
+  right: 18px;
+}
+.drag-handle:hover .drag-hint {
+  opacity: 1;
 }
 
 /* Share trigger (routes to compose) */
@@ -789,7 +847,7 @@ body.dragging .drag-grip {
   padding: 0;
   margin: 0;
   font: inherit;
-  font-weight: 600;
+  font-weight: 400; /* body weight — matches MORE_FONT_WEIGHT in the measurer */
   color: var(--li-muted);
   cursor: pointer;
 }
@@ -1096,6 +1154,22 @@ body.dragging .drag-grip {
   border-color: var(--li-blue);
   box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.15);
 }
+.privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: #f3f6f8;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--li-muted);
+}
+.privacy-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 .modal-foot {
   display: flex;
   justify-content: flex-end;
@@ -1175,4 +1249,78 @@ body.dragging .drag-grip {
 .jump-btn:disabled {
   color: var(--li-muted);
   cursor: default;
+}
+
+/* ─── Desktop-width hook, viewed on a phone: one sideways-scrollable card ───── */
+.dom-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.dom-banner {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--li-muted);
+  background: #eef3f8;
+  border-bottom: 1px solid var(--li-border);
+}
+.dom-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
+}
+.dom-scroll .center-col {
+  margin: 0 auto;
+}
+.dom-scroll .feed {
+  height: calc(100vh - 180px);
+}
+
+/* ─── Mobile: the tool strip + compose footer don't fit a phone otherwise ──── */
+@media (max-width: 640px) {
+  .tool-strip {
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+  .tool-strip .tool-brand {
+    font-size: 18px;
+  }
+  .tool-strip .width-controls {
+    width: 100%;
+    gap: 8px;
+  }
+  /* Presets scroll sideways instead of wrapping into a tall, cramped stack. */
+  .preset-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .preset-row::-webkit-scrollbar {
+    display: none;
+  }
+  .preset-btn {
+    flex: 0 0 auto;
+  }
+
+  /* Compose: give the Preview button its own full-width row so it can't collide
+     with the attach buttons + char count. */
+  .compose-screen {
+    padding: 14px 12px 48px;
+  }
+  .compose-card {
+    padding: 16px 14px 14px;
+  }
+  .compose-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .compose-attach {
+    justify-content: space-between;
+  }
+  .compose-foot .post-btn--lg {
+    width: 100%;
+  }
 }

@@ -13,16 +13,20 @@ import { WidthControls } from "./components/WidthControls";
 import { Feed } from "./components/Feed";
 import { computeHook } from "./measurer";
 import { parseMentions, displayLength } from "./segments";
-import { PRESETS, DEFAULT_PRESET_ID, cardWidthFor } from "./constants";
+import {
+  PRESETS,
+  DEFAULT_PRESET_ID,
+  cardWidthFor,
+  windowToTextWidth,
+  SIDEBAR_MIN_WIDTH,
+  LAYOUT_CSS_VARS,
+} from "./constants";
 import { SAMPLE_DRAFT } from "./data";
 import { loadState, saveState } from "./storage";
 import { PencilIcon } from "./components/icons";
 
 const presetWidth = (id: string) =>
   PRESETS.find((p) => p.id === id)?.width ?? PRESETS[0].width;
-
-// Below this text width we're "mobile" — LinkedIn drops sidebars + desktop nav.
-const SIDEBAR_MIN_WIDTH = 480;
 
 type Mode = "compose" | "preview";
 
@@ -36,18 +40,56 @@ export function App({ initialProfile }: { initialProfile: Profile }) {
   const [profile, setProfile] = useState<Profile>(persisted?.profile ?? initialProfile);
   const [draft, setDraft] = useState<PostDraft>(persisted?.draft ?? { text: SAMPLE_DRAFT });
   const [posted, setPosted] = useState<PostDraft | null>(persisted?.posted ?? null);
+  const [autoFormatMentions, setAutoFormatMentions] = useState<boolean>(
+    persisted?.settings?.autoFormatMentions ?? true
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Phone-sized real viewport: the desktop-width preview can't fit a 3-column
+  // shell here, so we fall back to a sideways-scrollable single card (below).
+  const [narrowViewport, setNarrowViewport] = useState<boolean>(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches
+  );
 
   const [textWidth, setTextWidth] = useState(presetWidth(DEFAULT_PRESET_ID));
   const [activePresetId, setActivePresetId] = useState<string | null>(DEFAULT_PRESET_ID);
+  const [matchWindow, setMatchWindow] = useState(false);
   const [visibleChars, setVisibleChars] = useState(0);
 
   const myPostRef = useRef<HTMLDivElement>(null);
 
   // Persist profile + draft + posted across sessions.
   useEffect(() => {
-    saveState({ profile, draft, posted });
-  }, [profile, draft, posted]);
+    saveState({ profile, draft, posted, settings: { autoFormatMentions } });
+  }, [profile, draft, posted, autoFormatMentions]);
+
+  // Track whether the real screen is phone-sized (for the desktop-on-mobile view).
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setNarrowViewport(mq.matches);
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // Publish the desktop-shell dimensions (constants.ts) as CSS vars so styles.css
+  // reads the same numbers the match-window math does — one source of truth.
+  useEffect(() => {
+    const root = document.documentElement;
+    for (const [name, value] of Object.entries(LAYOUT_CSS_VARS)) {
+      root.style.setProperty(name, value);
+    }
+  }, []);
+
+  // "Match my window": feed the live browser width into textWidth and follow
+  // every resize, so the preview is whatever LinkedIn would render on this
+  // screen right now. Any preset/drag turns it off (see handlers below).
+  useEffect(() => {
+    if (!matchWindow) return;
+    const apply = () => setTextWidth(windowToTextWidth(window.innerWidth));
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, [matchWindow]);
 
   const myPost: PostCardData | null = useMemo(
     () =>
@@ -77,11 +119,17 @@ export function App({ initialProfile }: { initialProfile: Profile }) {
   }, [posted, textWidth, mode]);
 
   const handlePreset = (id: string) => {
+    setMatchWindow(false);
     setTextWidth(presetWidth(id));
     setActivePresetId(id);
   };
   const handleDrag = (w: number) => {
+    setMatchWindow(false);
     setTextWidth(w);
+    setActivePresetId(null);
+  };
+  const toggleMatchWindow = () => {
+    setMatchWindow((on) => !on);
     setActivePresetId(null);
   };
   const jumpToMyPost = () =>
@@ -117,6 +165,8 @@ export function App({ initialProfile }: { initialProfile: Profile }) {
           hasPosted={!!posted && posted.text.trim().length > 0}
           onBackToFeed={() => setMode("preview")}
           onOpenSettings={() => setSettingsOpen(true)}
+          autoFormatMentions={autoFormatMentions}
+          onToggleAutoFormatMentions={() => setAutoFormatMentions((v) => !v)}
         />
         {settingsModal}
       </div>
@@ -149,6 +199,8 @@ export function App({ initialProfile }: { initialProfile: Profile }) {
           textWidth={textWidth}
           activePresetId={activePresetId}
           onPreset={handlePreset}
+          matchWindow={matchWindow}
+          onToggleMatchWindow={toggleMatchWindow}
           visibleChars={visibleChars}
         />
         <button className="jump-btn" type="button" onClick={jumpToMyPost} disabled={!myPost}>
@@ -156,7 +208,17 @@ export function App({ initialProfile }: { initialProfile: Profile }) {
         </button>
       </div>
 
-      {isDesktop ? (
+      {isDesktop && narrowViewport ? (
+        // Desktop-width hook on a phone: the 3-column shell can't fit, but the
+        // cut is governed only by text width — so show just the real-width card
+        // and let it scroll sideways. Same hook, usable on a small screen.
+        <div className="dom-wrap">
+          <div className="dom-banner">
+            Desktop-width hook · the card is wider than your screen — scroll it sideways →
+          </div>
+          <div className="dom-scroll">{feed}</div>
+        </div>
+      ) : isDesktop ? (
         <>
           <LinkedInNav profile={profile} />
           <div className="li-page">

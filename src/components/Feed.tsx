@@ -43,13 +43,17 @@ export function Feed({
   profile,
   onEdit,
 }: FeedProps) {
-  const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
+  // dir: +1 for the right edge (drag right = wider), -1 for the left edge
+  // (drag left = wider). The column is centered, so both edges feel symmetric.
+  const dragState = useRef<{ startX: number; startWidth: number; dir: number } | null>(
+    null
+  );
 
   const onPointerMove = useCallback(
     (e: PointerEvent) => {
       const s = dragState.current;
       if (!s) return;
-      const next = s.startWidth + (e.clientX - s.startX);
+      const next = s.startWidth + s.dir * (e.clientX - s.startX);
       onDragWidth(Math.max(MIN_TEXT_WIDTH, Math.min(MAX_TEXT_WIDTH, next)));
     },
     [onDragWidth]
@@ -63,9 +67,9 @@ export function Feed({
   }, [onPointerMove]);
 
   const startDrag = useCallback(
-    (e: React.PointerEvent) => {
+    (dir: number) => (e: React.PointerEvent) => {
       e.preventDefault();
-      dragState.current = { startX: e.clientX, startWidth: textWidth };
+      dragState.current = { startX: e.clientX, startWidth: textWidth, dir };
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", endDrag);
       document.body.classList.add("dragging");
@@ -87,13 +91,7 @@ export function Feed({
         ))}
 
         {myPost && (
-          <PostCard
-            key="my-post"
-            ref={myPostRef}
-            data={myPost}
-            textWidth={textWidth}
-           
-          />
+          <PostCard key="my-post" ref={myPostRef} data={myPost} textWidth={textWidth} />
         )}
 
         {after.map((f) => (
@@ -102,14 +100,27 @@ export function Feed({
       </div>
 
       <div
-        className="drag-handle"
-        onPointerDown={startDrag}
+        className="drag-handle drag-handle--left"
+        onPointerDown={startDrag(-1)}
         role="separator"
         aria-orientation="vertical"
         aria-label="Drag to resize the feed width"
-        title="Drag to resize"
+        title="Drag to resize the feed width"
       >
         <span className="drag-grip" />
+        <span className="drag-hint">↔ drag to resize</span>
+      </div>
+
+      <div
+        className="drag-handle drag-handle--right"
+        onPointerDown={startDrag(1)}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Drag to resize the feed width"
+        title="Drag to resize the feed width"
+      >
+        <span className="drag-grip" />
+        <span className="drag-hint">↔ drag to resize</span>
       </div>
     </div>
   );
