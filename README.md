@@ -15,7 +15,9 @@ npm run build    # type-check + production build to dist/
 ## Using it
 
 - **Compose** screen: write/paste your draft, attach an image and/or a link-preview card,
-  then **Preview in feed →**.
+  then **Preview in feed →**. On desktop a **live preview** card sits alongside the editor
+  and re-cuts the hook as you type; its **Mobile / Desktop** toggle is a quick "does the hook
+  survive on each?" check (exact widths and shells live in the full feed preview).
 - **Preview** screen: your post sits in a LinkedIn-style feed (desktop 3-column or a mobile
   phone frame depending on the width preset). Use the width **presets** or drag the right
   edge of the feed to resize; the hook re-cuts live. **✎ Edit post** returns to compose.

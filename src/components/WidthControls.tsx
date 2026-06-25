@@ -1,4 +1,4 @@
-import { PRESETS } from "../constants";
+import { PRESETS, DEFAULT_PRESET_ID } from "../constants";
 
 interface WidthControlsProps {
   textWidth: number;
@@ -20,6 +20,9 @@ export function WidthControls({
   onToggleMatchWindow,
   visibleChars,
 }: WidthControlsProps) {
+  // "Default" = the seed preset, no match-window. Surface a reset only when the
+  // width has drifted off it, so an accidental drag/preset/match is one click to fix.
+  const atDefault = !matchWindow && activePresetId === DEFAULT_PRESET_ID;
   return (
     <div className="width-controls">
       <div className="preset-row">
@@ -49,6 +52,16 @@ export function WidthControls({
         >
           Match my window
         </button>
+        {!atDefault && (
+          <button
+            type="button"
+            className="preset-btn preset-btn--reset"
+            onClick={() => onPreset(DEFAULT_PRESET_ID)}
+            title="Reset to the default width"
+          >
+            ↺ Reset
+          </button>
+        )}
       </div>
       <div className="readout">
         <span className="readout-num">{Math.round(textWidth)}px</span>

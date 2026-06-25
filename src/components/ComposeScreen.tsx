@@ -1,9 +1,12 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "./Avatar";
 import { LinkCard } from "./LinkCard";
+import { PostCard, type PostCardData } from "./PostCard";
 import type { Profile } from "../profile";
 import type { PostDraft } from "../types";
-import { MAX_POST_CHARS } from "../constants";
+import { MAX_POST_CHARS, PRESETS, DESKTOP_TEXT_WIDTH } from "../constants";
+import { computeHook } from "../measurer";
+import { parseMentions, displayLength } from "../segments";
 import { readImageFile } from "../util";
 import { CaretDown, GlobeIcon, ImageIcon, LinkIcon, GearIcon, CloseIcon } from "./icons";
 
@@ -12,12 +15,23 @@ interface ComposeScreenProps {
   draft: PostDraft;
   onChange: (patch: Partial<PostDraft>) => void;
   onPreview: () => void;
-  hasPosted: boolean;
-  onBackToFeed: () => void;
+  // Phone-sized real viewport: no room for the side-by-side live card, and a
+  // desktop-width card can't fit anyway, so the live pane is desktop-only.
+  narrowViewport: boolean;
   onOpenSettings: () => void;
   autoFormatMentions: boolean;
   onToggleAutoFormatMentions: () => void;
 }
+
+// The live card's two representative text widths. The toggle is a coarse
+// "does the hook survive on each?" peek — exact widths / shells live in the full
+// preview. Mobile is the default: the hook lives or dies on mobile.
+type LiveDevice = "mobile" | "desktop";
+// Mobile is the default — the hook lives or dies on mobile.
+const LIVE_WIDTH: Record<LiveDevice, number> = {
+  mobile: PRESETS.find((p) => p.id === "ip-portrait")?.width ?? 380,
+  desktop: DESKTOP_TEXT_WIDTH,
+};
 
 // The focused "simple screen": write/paste the draft, attach an image and/or a
 // link preview, then jump to the feed preview.
@@ -26,14 +40,14 @@ export function ComposeScreen({
   draft,
   onChange,
   onPreview,
-  hasPosted,
-  onBackToFeed,
+  narrowViewport,
   onOpenSettings,
   autoFormatMentions,
   onToggleAutoFormatMentions,
 }: ComposeScreenProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const [liveDevice, setLiveDevice] = useState<LiveDevice>("mobile");
   // Caret position to restore after a programmatic text edit. The textarea is
   // controlled, so React rerenders before we can set selection — stash it here
   // and apply it once the new value has landed (useLayoutEffect below).
@@ -93,6 +107,30 @@ export function ComposeScreen({
   const over = count > MAX_POST_CHARS;
   const empty = draft.text.trim().length === 0 && !draft.imageDataUrl && !draft.link;
 
+  // The live card mirrors a posted card (same engine, same chrome) but is fixed
+  // to the toggle's width and always collapsed — "is my hook right?" at a glance.
+  const liveWidth = LIVE_WIDTH[liveDevice];
+  const livePost: PostCardData = {
+    name: profile.name,
+    headline: profile.headline,
+    initials: profile.initials ?? "?",
+    avatarUrl: profile.avatarUrl,
+    timeAgo: "now",
+    reactions: 0,
+    comments: 0,
+    reposts: 0,
+    text: draft.text,
+    imageUrl: draft.imageDataUrl,
+    link: draft.link,
+    isMe: true,
+  };
+
+  // Above-the-fold readout for the live width — the same cut the card draws.
+  const fold = useMemo(() => {
+    const hook = computeHook(parseMentions(draft.text), liveWidth);
+    return { chars: displayLength(hook.visibleSegments), truncated: hook.truncated };
+  }, [draft.text, liveWidth]);
+
   const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) onChange({ imageDataUrl: await readImageFile(file) });
@@ -109,18 +147,15 @@ export function ComposeScreen({
 
   return (
     <div className="compose-screen">
-      <div className="compose-brandbar">
-        <div className="tool-brand">
-          hooked<span className="tool-brand-in">in</span>
-        </div>
-        {hasPosted && (
-          <button className="ghost-btn" type="button" onClick={onBackToFeed}>
-            ← Back to feed
-          </button>
-        )}
-      </div>
+      <div className="compose-stage">
+        <div className="compose-main">
+          <div className="compose-brandbar">
+            <div className="tool-brand">
+              hooked<span className="tool-brand-in">in</span>
+            </div>
+          </div>
 
-      <div className="compose-card">
+          <div className="compose-card">
         <div className="compose-head">
           <Avatar
             initials={profile.initials ?? "?"}
@@ -238,6 +273,46 @@ export function ComposeScreen({
             Preview in feed →
           </button>
         </div>
+          </div>
+        </div>
+
+        {!narrowViewport && (
+          <aside className="compose-preview">
+            <div className="compose-preview-bar">
+              <span className="compose-preview-label">Live preview</span>
+              <div className="live-toggle" role="tablist" aria-label="Preview width">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={liveDevice === "mobile"}
+                  className={liveDevice === "mobile" ? "live-toggle-btn is-active" : "live-toggle-btn"}
+                  onClick={() => setLiveDevice("mobile")}
+                >
+                  Mobile
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={liveDevice === "desktop"}
+                  className={liveDevice === "desktop" ? "live-toggle-btn is-active" : "live-toggle-btn"}
+                  onClick={() => setLiveDevice("desktop")}
+                >
+                  Desktop
+                </button>
+              </div>
+            </div>
+
+            <div className="compose-preview-stage">
+              <PostCard data={livePost} textWidth={liveWidth} />
+            </div>
+
+            <div className="compose-preview-fold">
+              {fold.truncated
+                ? `${fold.chars.toLocaleString()} characters show before “…more”`
+                : "Fits in the hook — no “…more”"}
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );

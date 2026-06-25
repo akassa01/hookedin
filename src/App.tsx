@@ -162,8 +162,7 @@ export function App({ initialProfile }: { initialProfile: Profile }) {
           draft={draft}
           onChange={onDraftChange}
           onPreview={goPreview}
-          hasPosted={!!posted && posted.text.trim().length > 0}
-          onBackToFeed={() => setMode("preview")}
+          narrowViewport={narrowViewport}
           onOpenSettings={() => setSettingsOpen(true)}
           autoFormatMentions={autoFormatMentions}
           onToggleAutoFormatMentions={() => setAutoFormatMentions((v) => !v)}
