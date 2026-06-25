@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Avatar } from "./Avatar";
 import { LinkCard } from "./LinkCard";
 import type { Profile } from "../profile";
@@ -15,6 +15,8 @@ interface ComposeScreenProps {
   hasPosted: boolean;
   onBackToFeed: () => void;
   onOpenSettings: () => void;
+  autoFormatMentions: boolean;
+  onToggleAutoFormatMentions: () => void;
 }
 
 // The focused "simple screen": write/paste the draft, attach an image and/or a
@@ -27,11 +29,65 @@ export function ComposeScreen({
   hasPosted,
   onBackToFeed,
   onOpenSettings,
+  autoFormatMentions,
+  onToggleAutoFormatMentions,
 }: ComposeScreenProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  // Caret position to restore after a programmatic text edit. The textarea is
+  // controlled, so React rerenders before we can set selection — stash it here
+  // and apply it once the new value has landed (useLayoutEffect below).
+  const pendingCaret = useRef<number | null>(null);
   const [showLink, setShowLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkTitle, setLinkTitle] = useState("");
+
+  useLayoutEffect(() => {
+    if (pendingCaret.current != null && textRef.current) {
+      textRef.current.setSelectionRange(pendingCaret.current, pendingCaret.current);
+      pendingCaret.current = null;
+    }
+  }, [draft.text]);
+
+  // Auto-pairing for @mentions: typing "@" inserts "@[]" with the caret between
+  // the brackets; an immediate Backspace on the empty pair drops back to a bare
+  // "@" (escape hatch for a literal @); typing "]" types over the auto-inserted
+  // one instead of doubling it.
+  const onTextKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!autoFormatMentions || e.metaKey || e.ctrlKey || e.altKey) return;
+    const ta = e.currentTarget;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const v = draft.text;
+
+    if (e.key === "@") {
+      e.preventDefault();
+      const selected = v.slice(start, end);
+      const next = v.slice(0, start) + "@[" + selected + "]" + v.slice(end);
+      // Caret inside the brackets (after any wrapped selection).
+      pendingCaret.current = start + 2 + selected.length;
+      onChange({ text: next });
+      return;
+    }
+
+    if (e.key === "Backspace" && start === end) {
+      // Caret sits in an empty pair: ...@[|]... → leave a bare "@".
+      if (v.slice(start - 2, start) === "@[" && v[start] === "]") {
+        e.preventDefault();
+        const next = v.slice(0, start - 1) + v.slice(start + 1);
+        pendingCaret.current = start - 1;
+        onChange({ text: next });
+      }
+      return;
+    }
+
+    if (e.key === "]" && start === end && v[start] === "]") {
+      // Type over the auto-inserted closing bracket instead of adding another.
+      // Text is unchanged, so move the caret directly (no rerender to wait on).
+      e.preventDefault();
+      ta.setSelectionRange(start + 1, start + 1);
+    }
+  };
 
   const count = draft.text.length;
   const over = count > MAX_POST_CHARS;
@@ -84,9 +140,11 @@ export function ComposeScreen({
         </div>
 
         <textarea
+          ref={textRef}
           className="compose-input"
           value={draft.text}
           onChange={(e) => onChange({ text: e.target.value })}
+          onKeyDown={onTextKeyDown}
           placeholder="What do you want to talk about?"
           autoFocus
           spellCheck
@@ -146,7 +204,21 @@ export function ComposeScreen({
         )}
 
         <div className="compose-hint">
-          Tip: type <code>@[Name]</code> for a blue @mention — e.g. <code>@[The Home Depot]</code>.
+          <span>
+            Tip: type <code>@[Name]</code> for a blue @mention — e.g.{" "}
+            <code>@[The Home Depot]</code>.
+          </span>
+          <label className="hint-toggle" title="Type @ to auto-insert @[ ] with your cursor inside">
+            <input
+              type="checkbox"
+              checked={autoFormatMentions}
+              onChange={onToggleAutoFormatMentions}
+            />
+            Auto-format mentions
+          </label>
+          {autoFormatMentions && (
+            <span className="hint-note">Typing @ auto-inserts the brackets.</span>
+          )}
         </div>
 
         <div className="compose-foot">

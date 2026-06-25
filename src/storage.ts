@@ -7,10 +7,16 @@ import type { PostDraft } from "./types";
 
 const KEY = "hookedin.v1";
 
+// UI/editing preferences that aren't part of the draft itself.
+export interface Settings {
+  autoFormatMentions?: boolean; // type "@" to auto-insert "@[]" — default on
+}
+
 export interface PersistedState {
   profile?: Profile;
   draft?: PostDraft;
   posted?: PostDraft | null;
+  settings?: Settings;
 }
 
 export function loadState(): PersistedState | null {
