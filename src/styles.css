@@ -1037,6 +1037,7 @@ body.dragging .drag-grip {
 }
 .link-card-thumb {
   width: 128px;
+  height: 128px;
   flex-shrink: 0;
   background: #d6dde3;
   display: flex;
@@ -1066,39 +1067,15 @@ body.dragging .drag-grip {
   font-weight: 600;
   color: rgba(0, 0, 0, 0.9);
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .link-card-domain {
   font-size: 12px;
   color: var(--li-muted);
   margin-top: 3px;
-}
-
-/* Rich layout: large OG hero image + caption bar, like LinkedIn's feed. */
-.link-card--rich {
-  flex-direction: column;
-  align-items: stretch;
-}
-.link-card-hero {
-  width: 100%;
-  aspect-ratio: 1.91 / 1;
-  background: #d6dde3;
-  overflow: hidden;
-}
-.link-card-hero img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.link-card-caption {
-  padding: 8px 12px 10px;
-  background: #eef3f8;
-}
-.link-card--rich .link-card-title {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* ─── Compose attachments + toolbar ──────────────────────────────────────── */

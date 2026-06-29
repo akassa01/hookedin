@@ -36,8 +36,8 @@ Measured fullscreen Safari / MacBook Air (2026-06): text **526px**, card **552px
   dev-server middleware (`vite.config.ts`, also covers `vite preview`) and a Vercel function
   (`api/unfurl.ts`) for prod. The OG image is **inlined as a data URL** (not a proxy link) so
   an attached link survives in `localStorage` and renders offline — same contract as uploaded
-  photos. `LinkCard` shows a rich large-image card when `imageDataUrl` is present, else a
-  compact thumbnail row.
+  photos. `LinkCard` is a compact horizontal row (square thumbnail + title/domain), matching
+  how LinkedIn renders article links — the OG image fills the left thumbnail when present.
   - The endpoint fetches user-supplied URLs, so it's an SSRF surface. `lib/unfurl.ts`'s
     `assertPublicUrl` enforces http(s)-only, ports 80/443 only, and rejects any hostname that
     resolves to a private/loopback/link-local/reserved IP (v4, v6, and IPv4-mapped) — and
