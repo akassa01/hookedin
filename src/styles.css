@@ -1073,6 +1073,34 @@ body.dragging .drag-grip {
   margin-top: 3px;
 }
 
+/* Rich layout: large OG hero image + caption bar, like LinkedIn's feed. */
+.link-card--rich {
+  flex-direction: column;
+  align-items: stretch;
+}
+.link-card-hero {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  background: #d6dde3;
+  overflow: hidden;
+}
+.link-card-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.link-card-caption {
+  padding: 8px 12px 10px;
+  background: #eef3f8;
+}
+.link-card--rich .link-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ─── Compose attachments + toolbar ──────────────────────────────────────── */
 .settings-btn {
   display: inline-flex;
@@ -1161,6 +1189,20 @@ body.dragging .drag-grip {
   justify-content: flex-end;
   gap: 10px;
   align-items: center;
+}
+.link-form-error {
+  font-size: 13px;
+  color: #b24020;
+}
+.link-inline-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--li-blue, #0a66c2);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
 }
 
 /* ─── Profile settings modal ─────────────────────────────────────────────── */

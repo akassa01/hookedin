@@ -31,6 +31,20 @@ Measured fullscreen Safari / MacBook Air (2026-06): text **526px**, card **552px
   "no storage / no settings UI" build-plan scope — don't revert them.
 - The tool's own chrome (tool strip, width controls) is kept visually distinct from the
   LinkedIn mock so it's obvious what's the tool vs. the preview.
+- **Link unfurl**: attaching a link fetches its OpenGraph tags. The fetch+parse logic lives
+  in `lib/unfurl.ts` (framework-free) and is served two ways from one module: a Vite
+  dev-server middleware (`vite.config.ts`, also covers `vite preview`) and a Vercel function
+  (`api/unfurl.ts`) for prod. The OG image is **inlined as a data URL** (not a proxy link) so
+  an attached link survives in `localStorage` and renders offline — same contract as uploaded
+  photos. `LinkCard` shows a rich large-image card when `imageDataUrl` is present, else a
+  compact thumbnail row.
+  - The endpoint fetches user-supplied URLs, so it's an SSRF surface. `lib/unfurl.ts`'s
+    `assertPublicUrl` enforces http(s)-only, ports 80/443 only, and rejects any hostname that
+    resolves to a private/loopback/link-local/reserved IP (v4, v6, and IPv4-mapped) — and
+    **re-validates every redirect hop** (redirects are followed manually). `lib/ratelimit.ts`
+    adds a best-effort in-memory per-IP cap (30/min). Both guards are shared by the dev
+    middleware and the Vercel function. Known residual: a narrow DNS-rebind TOCTOU window, and
+    the rate limit is per-process (approximate on serverless).
 
 ## Build / verify
 

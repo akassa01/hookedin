@@ -7,7 +7,7 @@ import type { PostDraft } from "../types";
 import { MAX_POST_CHARS, PRESETS, DESKTOP_TEXT_WIDTH } from "../constants";
 import { computeHook } from "../measurer";
 import { parseMentions, displayLength } from "../segments";
-import { readImageFile } from "../util";
+import { readImageFile, fetchLinkPreview, domainOf } from "../util";
 import { CaretDown, GlobeIcon, ImageIcon, LinkIcon, GearIcon, CloseIcon } from "./icons";
 
 interface ComposeScreenProps {
@@ -55,6 +55,8 @@ export function ComposeScreen({
   const [showLink, setShowLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkTitle, setLinkTitle] = useState("");
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     if (pendingCaret.current != null && textRef.current) {
@@ -137,12 +139,38 @@ export function ComposeScreen({
     e.target.value = "";
   };
 
-  const addLink = () => {
-    if (!linkUrl.trim()) return;
-    onChange({ link: { url: linkUrl.trim(), title: linkTitle.trim() } });
+  const resetLinkForm = () => {
     setLinkUrl("");
     setLinkTitle("");
+    setLinkError(null);
     setShowLink(false);
+  };
+
+  // Fetch OpenGraph data (title/description/image) so the card unfurls like it
+  // does on LinkedIn. A typed title overrides the fetched one.
+  const addLink = async () => {
+    const url = linkUrl.trim();
+    if (!url || linkLoading) return;
+    setLinkLoading(true);
+    setLinkError(null);
+    try {
+      const preview = await fetchLinkPreview(url);
+      onChange({ link: { ...preview, title: linkTitle.trim() || preview.title } });
+      resetLinkForm();
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : "Couldn't fetch preview");
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  // Escape hatch when the fetch fails (paywall, no OG tags, offline): attach a
+  // bare card from the URL alone.
+  const addLinkBare = () => {
+    const url = linkUrl.trim();
+    if (!url) return;
+    onChange({ link: { url, title: linkTitle.trim() || domainOf(url), domain: domainOf(url) } });
+    resetLinkForm();
   };
 
   return (
@@ -218,21 +246,50 @@ export function ComposeScreen({
               className="field-input"
               placeholder="https://example.com/article"
               value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
+              onChange={(e) => {
+                setLinkUrl(e.target.value);
+                setLinkError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void addLink();
+                }
+              }}
+              disabled={linkLoading}
               autoFocus
             />
             <input
               className="field-input"
-              placeholder="Card title (optional)"
+              placeholder="Custom title (optional — overrides the page title)"
               value={linkTitle}
               onChange={(e) => setLinkTitle(e.target.value)}
+              disabled={linkLoading}
             />
+            {linkError && (
+              <div className="link-form-error">
+                {linkError} —{" "}
+                <button className="link-inline-btn" type="button" onClick={addLinkBare}>
+                  add without preview
+                </button>
+              </div>
+            )}
             <div className="link-form-actions">
-              <button className="text-btn" type="button" onClick={() => setShowLink(false)}>
+              <button
+                className="text-btn"
+                type="button"
+                onClick={resetLinkForm}
+                disabled={linkLoading}
+              >
                 Cancel
               </button>
-              <button className="post-btn" type="button" onClick={addLink} disabled={!linkUrl.trim()}>
-                Add link
+              <button
+                className="post-btn"
+                type="button"
+                onClick={() => void addLink()}
+                disabled={!linkUrl.trim() || linkLoading}
+              >
+                {linkLoading ? "Fetching…" : "Add link"}
               </button>
             </div>
           </div>
