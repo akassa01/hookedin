@@ -3,8 +3,8 @@
 // middleware runs locally). Typed against node:http to avoid a build-time
 // dependency on @vercel/node — Vercel's Node runtime passes a compatible req/res.
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { unfurl } from "../lib/unfurl";
-import { clientIp, rateLimit } from "../lib/ratelimit";
+import { unfurl } from "../lib/unfurl.js";
+import { clientIp, rateLimit } from "../lib/ratelimit.js";
 
 export default async function handler(
   req: IncomingMessage,
