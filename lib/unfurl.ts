@@ -33,8 +33,11 @@ export interface UnfurlResult {
   domain: string;
 }
 
+// A browser-like UA: many publishers (WaPo, BBC, …) hang or block requests from
+// an obvious bot UA, so we present as Chrome to get their OpenGraph tags.
 const UA =
-  "Mozilla/5.0 (compatible; hookedin-unfurl/1.0; +https://github.com/akassa01/hookedin)";
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_HTML_BYTES = 2_000_000;
 const MAX_IMAGE_BYTES = 5_000_000;
@@ -240,7 +243,13 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
 }
 
 async function fetchText(url: string): Promise<{ url: string; html: string }> {
-  const res = await safeFetch(url, { headers: { "user-agent": UA, accept: "text/html,*/*" } });
+  const res = await safeFetch(url, {
+    headers: {
+      "user-agent": UA,
+      "accept-language": ACCEPT_LANGUAGE,
+      accept: "text/html,application/xhtml+xml,*/*",
+    },
+  });
   if (!res.ok) throw new UnfurlError(`Fetch failed (${res.status})`, 502);
   const buf = await res.arrayBuffer();
   const bytes = new Uint8Array(buf).subarray(0, MAX_HTML_BYTES);
